@@ -49,6 +49,8 @@ export interface Settings {
   play: {
     autoNext: boolean
     seekStep: number
+    introEnd: number
+    outroStart: number
   }
   sync: SyncSettings
 }
@@ -93,6 +95,8 @@ export const DEFAULT_SETTINGS: Settings = {
   play: {
     autoNext: true,
     seekStep: 10,
+    introEnd: 0,
+    outroStart: 0,
   },
   sync: {
     provider: 'off',

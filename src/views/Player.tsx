@@ -25,6 +25,10 @@ interface PlayerProps {
   state: PlaybackState
   autoNext: boolean
   seekStep: number
+  introEnd: number
+  outroStart: number
+  onSetIntro?: (seconds: number) => void
+  onSetOutro?: (seconds: number) => void
   onClose: () => void
   resolveUrl?: (url: string) => Promise<string>
   onProgress: (payload: {
@@ -43,6 +47,10 @@ export function Player({
   state,
   autoNext,
   seekStep,
+  introEnd,
+  outroStart,
+  onSetIntro,
+  onSetOutro,
   onClose,
   resolveUrl,
   onProgress,
@@ -52,6 +60,8 @@ export function Player({
   const hideTimer = useRef<number | null>(null)
   const lastSave = useRef(0)
   const menuRef = useRef<MenuKind>(null)
+  const introSkippedRef = useRef(false)
+  const outroHandledRef = useRef(false)
 
   const [groupIndex, setGroupIndex] = useState(state.groupIndex)
   const [episodeIndex, setEpisodeIndex] = useState(state.episodeIndex)
@@ -451,6 +461,30 @@ export function Player({
     reveal()
   }, [level, levels, reveal])
 
+  const markIntro = useCallback(() => {
+    const time = Math.floor(videoRef.current?.currentTime ?? 0)
+    if (time <= 0) {
+      setNotice('先播放几秒，再点「片头」标记')
+      return
+    }
+    onSetIntro?.(time)
+    introSkippedRef.current = true
+    setNotice(`片头结束：${formatTime(time)}`)
+    reveal()
+  }, [onSetIntro, reveal])
+
+  const markOutro = useCallback(() => {
+    const time = Math.floor(videoRef.current?.currentTime ?? 0)
+    if (time <= 0) {
+      setNotice('先播放到片尾附近，再点「片尾」标记')
+      return
+    }
+    onSetOutro?.(time)
+    outroHandledRef.current = true
+    setNotice(`片尾开始：${formatTime(time)}`)
+    reveal()
+  }, [onSetOutro, reveal])
+
   const buttons = useMemo(() => {
     const list = [
       { id: 'play', label: playing ? '暂停' : '播放', run: togglePlay },
@@ -460,6 +494,8 @@ export function Player({
       { id: 'mute', label: muted ? '取消静音' : '静音', run: toggleMute },
       { id: 'speed', label: `倍速 ${rate}x`, run: cycleRate },
       { id: 'quality', label: '切换清晰度', run: cycleQuality },
+      { id: 'intro', label: '标记片头', run: markIntro },
+      { id: 'outro', label: '标记片尾', run: markOutro },
     ]
     if (showLandscape) {
       list.push({ id: 'rotate', label: landscape ? '竖屏' : '横屏', run: () => void toggleLandscape() })
@@ -483,6 +519,8 @@ export function Player({
     fit,
     fullscreen,
     landscape,
+    markIntro,
+    markOutro,
     muted,
     playEpisode,
     playing,
@@ -571,9 +609,39 @@ export function Player({
     togglePlay,
   ])
 
+  useEffect(() => {
+    introSkippedRef.current = false
+    outroHandledRef.current = false
+  }, [resolvedUrl, episodeIndex])
+
   const onTimeUpdate = () => {
     const video = videoRef.current
     if (!video) return
+
+    if (
+      introEnd > 0 &&
+      video.currentTime > 1 &&
+      video.currentTime < introEnd &&
+      !introSkippedRef.current
+    ) {
+      video.currentTime = introEnd
+      introSkippedRef.current = true
+      setNotice(`已跳过片头 ${formatTime(introEnd)}`)
+    }
+
+    if (
+      outroStart > 0 &&
+      video.currentTime >= outroStart &&
+      !outroHandledRef.current
+    ) {
+      outroHandledRef.current = true
+      if (autoNext) {
+        nextEpisode()
+      } else {
+        setNotice(`已到片尾 ${formatTime(outroStart)}`)
+      }
+    }
+
     setCurrentTime(video.currentTime)
     if (video.buffered.length) {
       setBuffered(video.buffered.end(video.buffered.length - 1))
@@ -691,6 +759,7 @@ export function Player({
         playsInline
         style={brightness !== 1 ? { filter: `brightness(${brightness})` } : undefined}
         onTimeUpdate={onTimeUpdate}
+        onSeeked={onTimeUpdate}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onEnded={nextEpisode}
@@ -766,17 +835,6 @@ export function Player({
           </button>
         </div>
 
-        <div className="player-center">
-          <button
-            type="button"
-            className="big-play"
-            onClick={togglePlay}
-            aria-label={playing ? '暂停' : '播放'}
-          >
-            {playing ? <PauseIcon width={30} height={30} /> : <PlayIcon width={30} height={30} />}
-          </button>
-        </div>
-
         <div className="player-bottom">
           <div
             className={`timeline ${focusIndex === 0 ? 'is-focused' : ''}`}
@@ -788,6 +846,20 @@ export function Player({
                 style={{ width: `${duration ? (buffered / duration) * 100 : 0}%` }}
               />
               <div className="timeline-fill" style={{ width: `${progress * 100}%` }} />
+              {duration > 0 && introEnd > 0 && introEnd < duration ? (
+                <span
+                  className="timeline-marker intro"
+                  style={{ left: `${(introEnd / duration) * 100}%` }}
+                  title={`片头结束 ${formatTime(introEnd)}`}
+                />
+              ) : null}
+              {duration > 0 && outroStart > 0 && outroStart < duration ? (
+                <span
+                  className="timeline-marker outro"
+                  style={{ left: `${(outroStart / duration) * 100}%` }}
+                  title={`片尾开始 ${formatTime(outroStart)}`}
+                />
+              ) : null}
               <div className="timeline-knob" style={{ left: `${progress * 100}%` }} />
             </div>
           </div>
@@ -882,6 +954,24 @@ export function Player({
             >
               <HdIcon width={17} height={17} />
               {levels.length ? qualityLabel : '清晰度'}
+            </button>
+
+            <button
+              type="button"
+              className={`pbtn ${toolFocused('intro') ? 'is-focused' : ''}`}
+              onClick={markIntro}
+              title={`片头结束：${introEnd ? formatTime(introEnd) : '未设置'}`}
+            >
+              片头
+            </button>
+
+            <button
+              type="button"
+              className={`pbtn ${toolFocused('outro') ? 'is-focused' : ''}`}
+              onClick={markOutro}
+              title={`片尾开始：${outroStart ? formatTime(outroStart) : '未设置'}`}
+            >
+              片尾
             </button>
 
             {showLandscape ? (

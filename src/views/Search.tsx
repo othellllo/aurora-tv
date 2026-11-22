@@ -5,6 +5,7 @@ import { Card } from '../components/Card'
 import { ChevronLeft, CloseIcon, SearchIcon } from '../components/Icons'
 
 interface SearchProps {
+  active?: boolean
   demo: boolean
   siteName: string
   search: (keyword: string) => Promise<SearchHit[]>
@@ -21,7 +22,7 @@ const KEYS = [
   '4', '5', '6', '7', '8', '9', ' ', '删', '清',
 ]
 
-export function Search({ demo, siteName, search, onOpen, onClose }: SearchProps) {
+export function Search({ active = true, demo, siteName, search, onOpen, onClose }: SearchProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
@@ -40,6 +41,12 @@ export function Search({ demo, siteName, search, onOpen, onClose }: SearchProps)
       if (timer.current) window.clearTimeout(timer.current)
     }
   }, [])
+
+  useEffect(() => {
+    if (!active) return
+    const raf = requestAnimationFrame(() => inputRef.current?.focus())
+    return () => cancelAnimationFrame(raf)
+  }, [active])
 
   useEffect(() => {
     if (timer.current) window.clearTimeout(timer.current)

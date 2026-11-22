@@ -253,6 +253,36 @@ export function SettingsView({
                 onChange={(value) => updatePlay({ seekStep: value })}
               />
             </Row>
+            <Row label="片头结束" hint="播放到该秒数自动跳过；0 为关闭">
+              <input
+                className="field"
+                type="number"
+                min={0}
+                max={3600}
+                step={1}
+                style={{ maxWidth: 110 }}
+                value={play.introEnd}
+                onChange={(event) =>
+                  updatePlay({ introEnd: Math.max(0, Number(event.target.value) || 0) })
+                }
+              />
+              <span className="tag">秒</span>
+            </Row>
+            <Row label="片尾开始" hint="播放到该秒数自动下一集；0 为关闭">
+              <input
+                className="field"
+                type="number"
+                min={0}
+                max={14400}
+                step={1}
+                style={{ maxWidth: 110 }}
+                value={play.outroStart}
+                onChange={(event) =>
+                  updatePlay({ outroStart: Math.max(0, Number(event.target.value) || 0) })
+                }
+              />
+              <span className="tag">秒</span>
+            </Row>
           </div>
 
           <div className="group">
@@ -526,7 +556,7 @@ export function SettingsView({
 
           <div className="group">
             <div className="group-title">关于</div>
-            <Row label="Aurora TV" hint="0.1.17 · Tauri 2 + React · 手机 / Windows / Android TV">
+            <Row label="Aurora TV" hint="0.1.18 · Tauri 2 + React · 手机 / Windows / Android TV">
               <span className="tag">开源原型</span>
             </Row>
             <Row label="支持开发" hint="微信 / 支付宝赞赏码 · 完全自愿，不影响任何功能">

@@ -35,6 +35,7 @@ import { SettingsView } from './views/Settings'
 import { Sources } from './views/Sources'
 import { Search } from './views/Search'
 import { HistoryView } from './views/History'
+import { SourceRail } from './components/SourceRail'
 import { CategoryView } from './views/CategoryView'
 import { bindEdgeSwipe } from './core/gestures'
 
@@ -52,6 +53,8 @@ const CACHE_PREFIX = 'aurora.cache.'
 export default function App() {
   const [settings, setSettings] = useState<Settings>(() => loadSettings())
   const [page, setPage] = useState<'home' | 'category' | 'history'>('home')
+  const [searchMounted, setSearchMounted] = useState(false)
+  const detailReturnOverlay = useRef<'search' | null>(null)
   const [overlay, setOverlay] = useState<Overlay>(null)
   const [detail, setDetail] = useState<CatalogItem | null>(null)
   const [playback, setPlayback] = useState<PlaybackState | null>(null)
@@ -211,6 +214,13 @@ export default function App() {
 
   /* --------------------------------- 全局按键 --------------------------------- */
 
+  const closeDetail = useCallback(() => {
+    const back = detailReturnOverlay.current
+    detailReturnOverlay.current = null
+    setDetail(null)
+    if (back) setOverlay(back)
+  }, [])
+
   const closeTop = useCallback(() => {
     // 播放器会把焦点锁在内部，返回键仍应先关闭播放器
     if (playback) {
@@ -224,7 +234,7 @@ export default function App() {
       return
     }
     if (detail) {
-      setDetail(null)
+      closeDetail()
       return
     }
     if (page === 'category' || page === 'history') {
@@ -233,7 +243,7 @@ export default function App() {
       return
     }
     if (window.scrollY > 40) window.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [detail, overlay, page, playback])
+  }, [closeDetail, detail, overlay, page, playback])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -410,6 +420,7 @@ export default function App() {
     (groups: PlayGroup[], groupIndex: number, episodeIndex: number, startTime?: number, item?: CatalogItem) => {
       const source = item ?? detail
       if (!source) return
+      detailReturnOverlay.current = null
       setDetail(null)
       setOverlay(null)
       setPlayback({
@@ -445,6 +456,7 @@ export default function App() {
         })
         setDetail(null)
         setOverlay(null)
+        detailReturnOverlay.current = null
       } catch (error) {
         showToast((error as Error).message || '播放失败')
       }
@@ -470,10 +482,18 @@ export default function App() {
         return
       }
       setOverlay(null)
+      detailReturnOverlay.current = null
       setDetail(item)
     },
     [],
   )
+
+  const handleSearchOpen = useCallback((item: CatalogItem) => {
+    // 搜索层先收起，详情关闭后再回到原搜索结果
+    detailReturnOverlay.current = 'search'
+    setOverlay(null)
+    setDetail(item)
+  }, [])
 
   const handleProgress = useCallback(
     (payload: { groupIndex: number; episodeIndex: number; position: number; duration: number }) => {
@@ -613,6 +633,7 @@ export default function App() {
     overlay === 'settings' ? 'settings' : overlay === 'search' ? 'search' : page
 
   const navigate = (view: View) => {
+    detailReturnOverlay.current = null
     if (view === 'home') {
       setPage('home')
       setOverlay(null)
@@ -636,11 +657,15 @@ export default function App() {
     }
     setDetail(null)
     setOverlay(view)
+    if (view === 'search') setSearchMounted(true)
   }
 
   const sourceLabel = catalog.demo
     ? '演示片库'
     : catalog.site?.name ?? (catalog.booting ? '连接中…' : '未连接')
+
+  const showSourceRail =
+    !isPhoneUi() && !/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
 
   return (
     <div
@@ -665,6 +690,31 @@ export default function App() {
         demo={catalog.demo}
         hidden={barHidden}
       />
+
+      {showSourceRail && !overlay && !detail && !playback ? (
+        <SourceRail
+          sites={catalog.sites}
+          sources={catalog.sources}
+          activeSite={catalog.site}
+          sourceIndex={catalog.sourceIndex}
+          loading={catalog.phase === 'loading'}
+          onSelectSite={(site) => {
+            void catalog.selectSite(site)
+            setSettings((current) => ({
+              ...current,
+              data: { ...current.data, siteKey: site.key },
+            }))
+          }}
+          onSelectSource={(index) => {
+            setSettings((current) => ({
+              ...current,
+              data: { ...current.data, sourceIndex: index },
+            }))
+            void catalog.selectSource(index)
+          }}
+          onManage={() => setOverlay('sources')}
+        />
+      ) : null}
 
       <main className="stage">
         {page === 'category' ? (
@@ -706,21 +756,27 @@ export default function App() {
           item={detail}
           history={activeHistory.find((h) => h.mediaKey === `${detail.siteKey ?? 'demo'}|${detail.id}`)}
           loadGroups={catalog.loadGroups}
-          onClose={() => setDetail(null)}
+          onClose={closeDetail}
           onPlay={(groups, groupIndex, episodeIndex, startTime) =>
             startPlayback(groups, groupIndex, episodeIndex, startTime)
           }
         />
       ) : null}
 
-      {overlay === 'search' ? (
-        <Search
-          demo={catalog.demo}
-          siteName={catalog.site?.name ?? '演示片库'}
-          search={catalog.search}
-          onOpen={handleOpen}
-          onClose={() => setOverlay(null)}
-        />
+      {searchMounted ? (
+        <div
+          className="search-mount"
+          style={{ display: overlay === 'search' ? undefined : 'none' }}
+        >
+          <Search
+            active={overlay === 'search'}
+            demo={catalog.demo}
+            siteName={catalog.site?.name ?? '演示片库'}
+            search={catalog.search}
+            onOpen={handleSearchOpen}
+            onClose={() => setOverlay(null)}
+          />
+        </div>
       ) : null}
 
       {overlay === 'settings' ? (
@@ -776,6 +832,20 @@ export default function App() {
           state={playback}
           autoNext={settings.play.autoNext}
           seekStep={settings.play.seekStep}
+          introEnd={settings.play.introEnd ?? 0}
+          outroStart={settings.play.outroStart ?? 0}
+          onSetIntro={(seconds) =>
+            setSettings((current) => ({
+              ...current,
+              play: { ...current.play, introEnd: seconds },
+            }))
+          }
+          onSetOutro={(seconds) =>
+            setSettings((current) => ({
+              ...current,
+              play: { ...current.play, outroStart: seconds },
+            }))
+          }
           onClose={() => {
             setNavLock(false)
             setPlayback(null)
