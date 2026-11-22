@@ -125,7 +125,7 @@ if (legacySdk && legacySdk < 23) {
   if (!manifest.includes('overrideLibrary')) {
     manifest = manifest.replace(
       /<application\b/,
-      '    <uses-sdk tools:overrideLibrary="androidx.lifecycle.livedata.core.ktx,androidx.lifecycle.livedata.core,androidx.lifecycle.livedata,androidx.lifecycle.viewmodel.savedstate,androidx.lifecycle.viewmodel,androidx.lifecycle.runtime,androidx.lifecycle.process,androidx.lifecycle,androidx.savedstate.ktx,androidx.savedstate,androidx.activity.ktx,androidx.activity,androidx.core.ktx,androidx.core,androidx.appcompat,androidx.fragment,androidx.window.core,androidx.window,androidx.webkit" />\n\n    <application',
+      '    <uses-sdk tools:overrideLibrary="androidx.lifecycle.livedata.core.ktx,androidx.lifecycle.livedata.core,androidx.lifecycle.livedata,androidx.lifecycle.viewmodel.savedstate,androidx.lifecycle.lifecycle.viewmodel.anchor,androidx.lifecycle.viewmodel,androidx.lifecycle.runtime,androidx.lifecycle.process,androidx.lifecycle,androidx.savedstate.ktx,androidx.savedstate,androidx.activity.ktx,androidx.activity,androidx.core.ktx,androidx.core,androidx.appcompat,androidx.fragment,androidx.window.core,androidx.window,androidx.webkit" />\n\n    <application',
     )
   }
 }
