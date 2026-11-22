@@ -1,7 +1,7 @@
 {
   "name": "aurora-tv",
   "private": true,
-  "version": "0.1.16",
+  "version": "0.1.17",
   "type": "module",
   "description": "Aurora TV — 苹果 TV 风格的跨端 TVBox 客户端（Android / Windows / Android TV）",
   "scripts": {

@@ -117,10 +117,77 @@ jobs:
           if-no-files-found: error
           path: src-tauri/gen/android/app/build/outputs/apk/**/release/*.apk
 
+  android-legacy:
+    name: Android legacy TV (API 21)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      APP_VARIANT: tv
+      LEGACY_MIN_SDK: "21"
+      NDK_VERSION: 27.2.12479018
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      NDK_HOME: /usr/local/lib/android/sdk/ndk/27.2.12479018
+      ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.2.12479018
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android SDK / NDK
+        run: |
+          SDKMANAGER=$(ls "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -n 1)
+          echo "using $SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;${NDK_VERSION}"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: armv7-linux-androideabi
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri -> target"
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Initialize Android project
+        run: npx tauri android init --ci --skip-targets-install
+
+      - name: Patch legacy TV manifest (API 21)
+        run: node scripts/patch-android-tv.mjs
+
+      - name: Configure release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: node scripts/patch-android-signing.mjs
+
+      - name: Build legacy signed APK
+        run: npx tauri android build --apk --target armv7
+
+      - name: Upload legacy APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: aurora-tv-android-legacy
+          if-no-files-found: error
+          path: src-tauri/gen/android/app/build/outputs/apk/**/release/*.apk
+
   release:
     name: Attach artifacts to release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [windows, android]
+    needs: [windows, android, android-legacy]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

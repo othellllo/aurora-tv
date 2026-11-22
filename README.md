@@ -136,12 +136,13 @@ npm run share
 
 | 端 | 适用设备 | 文件 |
 | --- | --- | --- |
-| **手机端** | 64 位安卓手机 | `AuroraTV_0.1.16_phone-arm64-v8a.apk` |
-| **手机端** | 32 位老手机 | `AuroraTV_0.1.16_phone-armeabi-v7a.apk` |
-| **电视端** | 64 位电视 / 盒子 | `AuroraTV_0.1.16_tv-arm64-v8a.apk` |
-| **电视端** | 32 位老电视盒子 | `AuroraTV_0.1.16_tv-armeabi-v7a.apk` |
-| **Windows 端** | Win10 / Win11 安装版 | `AuroraTV_0.1.16_x64-setup.exe` |
-| **Windows 端** | MSI 部署包 | `AuroraTV_0.1.16_x64_en-US.msi` |
+| **手机端** | 64 位安卓手机 | `AuroraTV_0.1.17_phone-arm64-v8a.apk` |
+| **手机端** | 32 位老手机 | `AuroraTV_0.1.17_phone-armeabi-v7a.apk` |
+| **电视端** | 64 位电视 / 盒子 | `AuroraTV_0.1.17_tv-arm64-v8a.apk` |
+| **电视端** | 32 位老电视盒子 | `AuroraTV_0.1.17_tv-armeabi-v7a.apk` |
+| **电视 legacy** | Android 5.0 / 5.1 老电视（实验性） | `AuroraTV_0.1.17_tv-legacy-armeabi-v7a.apk` |
+| **Windows 端** | Win10 / Win11 安装版 | `AuroraTV_0.1.17_x64-setup.exe` |
+| **Windows 端** | MSI 部署包 | `AuroraTV_0.1.17_x64_en-US.msi` |
 | **鸿蒙 4.x** | 兼容 Android 的华为手机 | 安装上面的**手机端 APK** |
 | **鸿蒙 NEXT 5.x** | 纯血鸿蒙 | 暂用网页 / PWA，见 [docs/HARMONY.md](docs/HARMONY.md) |
 
@@ -152,7 +153,7 @@ npm run share
 
 两者包名相同（`com.auroratv.app`）、签名相同，同一台设备只需装其中一个；从手机版换电视版会直接覆盖安装。
 APK 均已用项目自带 keystore 做 release 签名；从 **0.1.11** 起同时带 v1（JAR）和 v2 签名，最低支持 **Android 6.0（API 23）**，老电视请优先试 `tv-armeabi-v7a`。
-Android 5.1 及以下太老（Tauri 依赖的 AndroidX 组件最低要求 API 23），不在支持范围。
+Android 5.0 / 5.1 的老电视（如 Redmi L43M7-EA）可以试 `tv-legacy-armeabi-v7a` 实验包；Tauri 官方最低是 Android 7，legacy 包的 WebView 兼容性不保证。
 
 ### 0. 环境
 

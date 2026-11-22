@@ -114,6 +114,22 @@ if (variant === 'tv') {
   }
 }
 
+const legacySdk = Number(process.env.LEGACY_MIN_SDK || 0)
+if (legacySdk && legacySdk < 23) {
+  if (!manifest.includes('xmlns:tools')) {
+    manifest = manifest.replace(
+      '<manifest ',
+      '<manifest xmlns:tools="http://schemas.android.com/tools" ',
+    )
+  }
+  if (!manifest.includes('overrideLibrary')) {
+    manifest = manifest.replace(
+      /<application\b/,
+      '    <uses-sdk tools:overrideLibrary="androidx.lifecycle.livedata.core.ktx" />\n\n    <application',
+    )
+  }
+}
+
 fs.writeFileSync(manifestPath, manifest)
 
 // 拦截 Android 返回键：先交给网页处理层级返回，网页不处理时才退出 App
@@ -168,9 +184,21 @@ if (activityFile) {
 const gradlePath = path.join(root, 'src-tauri', 'gen', 'android', 'app', 'build.gradle.kts')
 if (fs.existsSync(gradlePath)) {
   const before = fs.readFileSync(gradlePath, 'utf8')
-  let after = before.replace(/(\btargetSdk\s*=\s*)\d+/, (_match, prefix) => `${prefix}34`)
-  if (after === before) {
-    after = before.replace(/(\btargetSdkVersion\s*=\s*)\d+/, (_match, prefix) => `${prefix}34`)
+  let after = before
+  if (legacySdk) {
+    after = after.replace(/(\bminSdk\s*=\s*)\d+/, (_match, prefix) => `${prefix}${legacySdk}`)
+    if (after === before) {
+      after = after.replace(
+        /(\bminSdkVersion\s*=\s*)\d+/,
+        (_match, prefix) => `${prefix}${legacySdk}`,
+      )
+    }
+    console.log(`[patch-android] legacy minSdk: ${legacySdk}`)
+  }
+  const withSdk = after
+  after = after.replace(/(\btargetSdk\s*=\s*)\d+/, (_match, prefix) => `${prefix}34`)
+  if (after === withSdk) {
+    after = after.replace(/(\btargetSdkVersion\s*=\s*)\d+/, (_match, prefix) => `${prefix}34`)
   }
   if (after !== before) {
     fs.writeFileSync(gradlePath, after)
