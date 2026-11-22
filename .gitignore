@@ -22,3 +22,5 @@ Thumbs.db
 *.jks
 *.keystore
 .secrets/
+# 本地生成的老电视 TVBox 安装包（不提交 25MB 二进制）
+AuroraTV_TVBox_legacy_*.apk
