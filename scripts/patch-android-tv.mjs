@@ -125,7 +125,7 @@ if (legacySdk && legacySdk < 23) {
   if (!manifest.includes('overrideLibrary')) {
     manifest = manifest.replace(
       /<application\b/,
-      '    <uses-sdk tools:overrideLibrary="androidx.lifecycle.livedata.core.ktx" />\n\n    <application',
+      '    <uses-sdk tools:overrideLibrary="androidx.lifecycle.livedata.core.ktx,androidx.lifecycle.viewmodel.savedstate,androidx.lifecycle.viewmodel,androidx.lifecycle" />\n\n    <application',
     )
   }
 }

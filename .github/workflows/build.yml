@@ -175,7 +175,7 @@ jobs:
         run: node scripts/patch-android-signing.mjs
 
       - name: Build legacy signed APK
-        run: npx tauri android build --apk --target armv7
+        run: npx tauri android build --apk --target armv7 --config '{"bundle":{"android":{"minSdkVersion":21}}}'
 
       - name: Upload legacy APK
         uses: actions/upload-artifact@v4
